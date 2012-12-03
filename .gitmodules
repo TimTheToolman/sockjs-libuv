@@ -1,0 +1,6 @@
+[submodule "libuv"]
+	path = vendor/libuv
+	url = git://github.com/joyent/libuv.git
+[submodule "http-parser"]
+	path = vendor/http-parser
+	url = git://github.com/joyent/http-parser.git
