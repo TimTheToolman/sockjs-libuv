@@ -1,12 +1,31 @@
-all:	vendor/libuv/uv.a vendor/http-parser/http-parser.a
+CSTDFLAG=-pedantic -Wall -Wno-unused-parameter
+CFLAGS += -g -Ivendor/libuv/include -Ivendor/http-parser
+LINKFLAGS=-lm -lpthread
+
+OBJS=src/server.o src/client.o src/memory.o src/http.o src/queue.o
+
+# Platform customizations
+uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')
+
+ifeq (Darwin,$(uname_S))
+LINKFLAGS+=-framework CoreServices
+endif
+
+# Rules
+all:	vendor/libuv/libuv.a vendor/http-parser/libhttp_parser.a server
+
+server: $(OBJS)
+		$(CC) -o src/server $(OBJS) vendor/libuv/libuv.a vendor/http-parser/libhttp_parser.a $(LINKFLAGS)
 
 clean:
-		rm vendor/libuv/uv.a
-		rm vendor/http-parser/http-parser.a
+		rm -f src/server
+
+src/%.o: src/%.c
+		$(CC) $(CSTDFLAG) $(CFLAGS) -c $< -o $@
 
 # Dependencies
-vendor/libuv/uv.a:
+vendor/libuv/libuv.a:
 		$(MAKE) -C vendor/libuv
 
-vendor/http-parser/http-parser.a:
+vendor/http-parser/libhttp_parser.a:
 		$(MAKE) -C vendor/http-parser package
