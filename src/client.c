@@ -46,11 +46,9 @@ int on_body(http_parser* p, const char* data, size_t len) {
 
 	size_t old_len = request->body.len;
 	if (old_len > 0) {
-		request->body.base = realloc(request->body.base, old_len + len);
-		request->body.len += len;
+		request->body = memory_realloc(request->body, old_len + len);
 	} else {
-		request->body.base = malloc(len);
-		request->body.len = len;
+		request->body = memory_alloc(len);
 	}
 
 	memcpy(((char *)request->body.base + old_len), data, len);
@@ -126,7 +124,7 @@ void after_close(uv_handle_t* handle) {
 
 void client_close(client_t* client) {
 	if (client->is_active) {
-		uv_close((uv_handle_t*)&client->tcp, after_close);
+		uv_close((uv_handle_t*)&client->stream, after_close);
 		client->is_active = FALSE;
 	}
 }
@@ -156,17 +154,17 @@ void on_net_data(uv_stream_t* stream, ssize_t nread, uv_buf_t buf) {
 			ssize_t parsed = http_parser_execute(&client->parser, &client_parser, buf.base, nread);
 
 			if (parsed < nread) {
-				uv_close((uv_handle_t *)&client->tcp, after_close);
+				uv_close((uv_handle_t *)&client->stream, after_close);
 			}
 		} else {
 			// Pass buffer to the sub protocol handler
 			client->handler(client, nread, buf);
 		}
 	} else {
-		uv_close((uv_handle_t *)&client->tcp, after_close);
+		uv_close((uv_handle_t *)&client->stream, after_close);
 	}
 
-	free(buf.base);
+	memory_free(buf);
 }
 
 // Client state
@@ -178,17 +176,17 @@ int client_init(server_t* server, client_t* client) {
 
 	queue_init(&client->request_queue);
 
-	uv_tcp_init(server->loop, &client->tcp);
-	client->tcp.data = client;
+	uv_tcp_init(server->loop, &client->stream);
+	client->stream.data = client;
 
 	http_parser_init(&client->parser, HTTP_REQUEST);
 	client->parser.data = client;
 
-	if (uv_accept((uv_stream_t*)&server->tcp, (uv_stream_t*)&client->tcp) == 0) {
-		uv_read_start((uv_stream_t*)&client->tcp, memory_alloc, on_net_data);
+	if (uv_accept((uv_stream_t*)&server->stream, (uv_stream_t*)&client->stream) == 0) {
+		uv_read_start((uv_stream_t*)&client->stream, memory_uv_alloc, on_net_data);
 		return 0;
 	} else {
-		uv_close((uv_handle_t*)&client->tcp, NULL);
+		uv_close((uv_handle_t*)&client->stream, NULL);
 		return -1;
 	}
 }
@@ -209,7 +207,7 @@ void client_send_response(client_t* client) {
 									status_string,
 									resp->headers.base);
 
-		resp->response[0] = uv_buf_init(malloc(response_len), response_len);
+		resp->response[0] = memory_alloc(response_len);
 		snprintf(resp->response[0].base, response_len, HTTP_HEADER_TEMPLATE,
 									resp->http_version_minor,
 									resp->status_code,
@@ -221,7 +219,7 @@ void client_send_response(client_t* client) {
 									resp->status_code,
 									status_string);
 
-		resp->response[0] = uv_buf_init(malloc(response_len), response_len);
+		resp->response[0] = memory_alloc(response_len);
 		snprintf(resp->response[0].base, response_len, HTTP_TEMPLATE,
 									resp->http_version_minor,
 									resp->status_code,
@@ -238,7 +236,7 @@ void client_send_response(client_t* client) {
 
 	resp->write.data = resp;
 	uv_write(&resp->write,
-			(uv_stream_t*)&client->tcp,
+			(uv_stream_t*)&client->stream,
 			resp->response,
 			count,
 			after_write);

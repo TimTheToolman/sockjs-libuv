@@ -16,7 +16,7 @@ typedef struct client_s {
 	server_t* server;
 
 	// Connection related
-	uv_tcp_t tcp;
+	uv_tcp_t stream;
 	http_parser parser;
 
 	int is_active;

@@ -12,7 +12,7 @@ int check_path(const char* path, const char* needle, int len) {
 
 void handle_hello(client_t* client) {
 	client->response->status_code = 200;
-	client->response->body = uv_buf_init(malloc(sizeof(11)), 11);
+	client->response->body = memory_alloc(11);
 	memcpy(client->response->body.base, "Hello World", 11);
 	client_send_response(client);
 }

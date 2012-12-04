@@ -23,26 +23,26 @@ server_t* server_init(uv_loop_t* loop, const char* addr, int port) {
 	server->loop = loop;
 
 	// Initialize TCP server
-	if (uv_tcp_init(loop, &server->tcp)) {
+	if (uv_tcp_init(loop, &server->stream)) {
 		ERROR(loop);
 		free(server);
 		return NULL;
 	}
-	server->tcp.data = server;
+	server->stream.data = server;
 
 	// TODO: Fix me
 	struct sockaddr_in address = uv_ip4_addr(addr, port);
 
-	if (uv_tcp_bind(&server->tcp, address)) {
+	if (uv_tcp_bind(&server->stream, address)) {
 		ERROR(loop);
-		uv_close((uv_handle_t*)&server->tcp, NULL);
+		uv_close((uv_handle_t*)&server->stream, NULL);
 		free(server);
 		return NULL;
 	}
 
-	if (uv_listen((uv_stream_t*)&server->tcp, 128, server_on_connection)) {
+	if (uv_listen((uv_stream_t*)&server->stream, 128, server_on_connection)) {
 		ERROR(loop);
-		uv_close((uv_handle_t*)&server->tcp, NULL);
+		uv_close((uv_handle_t*)&server->stream, NULL);
 		free(server);
 		return NULL;
 	}

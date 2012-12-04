@@ -5,7 +5,7 @@
 
 // HTTP server state
 typedef struct {
-	uv_tcp_t tcp;
+	uv_tcp_t stream;
 	uv_loop_t* loop;
 } server_t;
 

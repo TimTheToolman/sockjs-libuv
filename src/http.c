@@ -16,9 +16,7 @@ void http_request_free(http_request_t* req)
 		req->url = NULL;
 	}
 
-	if (req->body.base != NULL) {
-		req->body = memory_free(req->body);
-	}
+	memory_release_buf(req->body);
 }
 
 // Response stuff
@@ -29,11 +27,10 @@ void http_response_init(http_response_t* resp)
 
 void http_response_free(http_response_t* resp)
 {
-	resp->headers = memory_free(resp->headers);
-	resp->body = memory_free(resp->body);
-
-	resp->response[0] = memory_free(resp->response[0]);
-	resp->response[1] = memory_free(resp->response[1]);
+	memory_release_buf(resp->headers);
+	memory_release_buf(resp->body)
+	memory_release_buf(resp->response[0]);
+	memory_release_buf(resp->response[1]);
 }
 
 void http_response_set_error(http_response_t* resp, int status_code)
