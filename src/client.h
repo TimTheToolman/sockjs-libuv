@@ -35,6 +35,7 @@ typedef struct client_s {
 } client_t;
 
 int client_init(server_t* server, client_t* client);
-void client_send_response(client_t* client);
+void client_send_headers(client_t* client);
+void client_finish_response(client_t* client);
 
 #endif

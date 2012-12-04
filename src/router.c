@@ -17,7 +17,7 @@ void handle_hello(client_t* client) {
 	client->response->body = memory_alloc(11);
 	http_response_add_header(client->response, HEADER, sizeof(HEADER) - 1);
 	memcpy(client->response->body.base, "Hello World", 11);
-	client_send_response(client);
+	client_finish_response(client);
 }
 
 void route_request(client_t* client)
@@ -40,5 +40,5 @@ void route_request(client_t* client)
 	}
 
 	http_response_set_error(client->response, 404);
-    client_send_response(client);
+    client_finish_response(client);
 }

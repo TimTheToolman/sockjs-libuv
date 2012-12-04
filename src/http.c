@@ -31,12 +31,12 @@ void http_response_free(http_response_t* resp)
 {
 	memory_release_buf(resp->headers);
 	memory_release_buf(resp->body);
-	memory_release_buf(resp->response[0]);
+	memory_release_buf(resp->hdr_buf);
 }
 
 void http_response_add_header(http_response_t* resp, const char* header, size_t length)
 {
-	int len = resp->headers.len;
+	size_t len = resp->headers.len;
 
 	if (len == 0)
 		len = 64;

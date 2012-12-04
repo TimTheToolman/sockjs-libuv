@@ -21,14 +21,23 @@ typedef struct {
 	// HTTP protocol version (1.x)
 	int http_version_minor;
 	// Output header blob
+    
+	// TODO: Use optimized data structure
 	uv_buf_t headers;
-    int headers_len;
+    size_t headers_len;
+    
+    // TODO: Special bool type
+    int headers_sent;
+    
 	// Response body
 	uv_buf_t body;
 
 	// libuv stuff
-	uv_buf_t response[2];
-	uv_write_t write;
+	uv_buf_t hdr_buf;
+
+	uv_write_t hdr_write;
+	uv_write_t body_write;
+
 	int keep_alive;
 } http_response_t;
 

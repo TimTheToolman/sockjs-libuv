@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #include "global.h"
 #include "client.h"
 #include "memory.h"
@@ -140,13 +141,27 @@ void after_write(uv_write_t* req, int status) {
 		ERROR(client->server->loop);
 		client_close(client);
     } else
-	if (!resp->keep_alive)
+	if (!resp->keep_alive) {
 		client_close(client);
+	}
 
     http_response_free(resp);
     free(resp);
+
     if (resp == client->response)
         client->response = NULL;
+}
+
+void after_header_write(uv_write_t* req, int status) {
+	client_t* client = (client_t*)req->handle->data;
+	http_response_t* resp = (http_response_t*)req->data;
+
+	if (status != 0) {
+		ERROR(client->server->loop);
+		client_close(client);
+	}
+
+	memory_release_buf(resp->hdr_buf);
 }
 
 // Network
@@ -195,55 +210,80 @@ int client_init(server_t* server, client_t* client) {
 	}
 }
 
-void client_send_response(client_t* client) {
+uv_buf_t client_make_headers(client_t* client)
+{
 	http_response_t* resp = client->response;
 
 	// Generate HTTP response
 	const char* status_string = http_get_status_string(resp->status_code);
 
-	int response_len;
+	int len;
+	uv_buf_t response;
 
-	if (resp->headers.len > 0)
-	{
-		response_len = snprintf(NULL, 0, HTTP_HEADER_TEMPLATE,
+	if (resp->headers.len > 0) {
+		len = snprintf(NULL, 0, HTTP_HEADER_TEMPLATE,
 									resp->http_version_minor,
 									resp->status_code,
 									status_string,
 									resp->headers.base);
 
-		resp->response[0] = memory_alloc(response_len + 1);
-		snprintf(resp->response[0].base, response_len + 1, HTTP_HEADER_TEMPLATE,
-									resp->http_version_minor,
-									resp->status_code,
-									status_string,
-									resp->headers.base);
+		response = memory_alloc(len + 1);
+		snprintf(response.base, len + 1, HTTP_HEADER_TEMPLATE,
+						resp->http_version_minor,
+						resp->status_code,
+						status_string,
+						resp->headers.base);
 	} else {
-		response_len = snprintf(NULL, 0, HTTP_TEMPLATE,
+		len = snprintf(NULL, 0, HTTP_TEMPLATE,
 									resp->http_version_minor,
 									resp->status_code,
 									status_string);
 
-		resp->response[0] = memory_alloc(response_len + 1);
-		snprintf(resp->response[0].base, response_len + 1, HTTP_TEMPLATE,
+		response = memory_alloc(len + 1);
+		snprintf(response.base, len + 1, HTTP_TEMPLATE,
 									resp->http_version_minor,
 									resp->status_code,
 									status_string);
 	}
+    
+    return response;
+}
 
-	int count = 1;
+void client_send_headers(client_t* client)
+{
+	http_response_t* resp = client->response;
 
-	// Prepare write request
+	assert(!resp->headers_sent);
+
+	resp->hdr_buf = client_make_headers(client);
+	resp->hdr_write.data = resp;
+
+	uv_write(&resp->hdr_write,
+		(uv_stream_t*)&client->stream,
+		&resp->hdr_buf,
+		1,
+		after_header_write);
+
+	resp->headers_sent = TRUE;
+}
+
+void client_finish_response(client_t* client)
+{
+	http_response_t* resp = client->response;
+    
+	if (!resp->headers_sent)
+		client_send_headers(client);
+
+	// If necessary - send body
 	if (resp->body.len > 0) {
-		resp->response[1] = resp->body;
-		count = 2;
-	}
+		resp->body_write.data = resp;
 
-	resp->write.data = resp;
-	uv_write(&resp->write,
-			(uv_stream_t*)&client->stream,
-			resp->response,
-			count,
-			after_write);
+		uv_write(&resp->body_write,
+					(uv_stream_t*)&client->stream,
+					&resp->body,
+					1,
+					after_write);
+	}
 
 	// Cleanup previous request
 	http_request_free(client->request);
