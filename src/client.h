@@ -1,11 +1,17 @@
 #ifndef CLIENT_H_
 #define CLIENT_H_
 
+#include <uv.h>
+#include <http_parser.h>
 #include "server.h"
 #include "http.h"
 #include "queue.h"
 
-typedef struct {
+struct client_s;
+
+typedef void (* handler_t)(struct client_s* client, size_t nread, uv_buf_t buf);
+
+typedef struct client_s {
 	// Server reference
 	server_t* server;
 
@@ -15,6 +21,9 @@ typedef struct {
 
 	int is_active;
 
+	// Handlers
+	handler_t handler;
+
 	// Request states
 	http_request_t* request;
 	queue_t request_queue;
@@ -23,9 +32,9 @@ typedef struct {
 
 	// Response
 	http_response_t* response;
-} http_client_t;
+} client_t;
 
-void client_init(http_client_t* client);
-void client_send_response(http_client_t* client);
+int client_init(server_t* server, client_t* client);
+void client_send_response(client_t* client);
 
 #endif

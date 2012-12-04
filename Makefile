@@ -2,7 +2,7 @@ CSTDFLAG=-pedantic -Wall -Wno-unused-parameter
 CFLAGS += -g -Ivendor/libuv/include -Ivendor/http-parser
 LINKFLAGS=-lm -lpthread
 
-OBJS=src/server.o src/client.o src/memory.o src/http.o src/queue.o
+OBJS=src/server.o src/client.o src/memory.o src/http.o src/queue.o src/router.o
 
 # Platform customizations
 uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')

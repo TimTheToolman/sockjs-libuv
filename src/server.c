@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <uv.h>
+#include "global.h"
 #include "server.h"
 #include "client.h"
 
@@ -24,7 +24,7 @@ server_t* server_init(uv_loop_t* loop, const char* addr, int port) {
 
 	// Initialize TCP server
 	if (uv_tcp_init(loop, &server->tcp)) {
-		ERROR(loop)
+		ERROR(loop);
 		free(server);
 		return NULL;
 	}
@@ -52,7 +52,7 @@ server_t* server_init(uv_loop_t* loop, const char* addr, int port) {
 
 int main(int argc, char** argv) {
 	uv_loop_t* loop = uv_default_loop();
-	server_init(loop);
+	server_init(loop, "0.0.0.0", 8002);
 	uv_run(loop);
 	return 0;
 }

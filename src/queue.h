@@ -2,13 +2,13 @@
 #define QUEUE_H_
 
 typedef struct node_s {
-	void* data;
+	void* value;
 	struct node_s* next;
 } node_t;
 
 typedef struct {
-	node_t* start;
-	node_t* end;
+	node_t* head;
+	node_t* tail;
 } queue_t;
 
 void queue_init(queue_t* queue);

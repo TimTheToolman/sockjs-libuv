@@ -1,3 +1,5 @@
+#include <string.h>
+#include <stdlib.h>
 #include "queue.h"
 
 // TODO: Use more efficient memory layout

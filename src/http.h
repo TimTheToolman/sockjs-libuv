@@ -1,7 +1,7 @@
 #ifndef	HTTP_H_
 #define HTTP_H_
 
-typedef struct client_t;
+#include <uv.h>
 
 // HTTP request
 typedef struct {
@@ -26,8 +26,8 @@ typedef struct {
 	uv_buf_t body;
 
 	// libuv stuff
-	uv_buf_t response_buf;
-	write_req_t write_req;
+	uv_buf_t response[2];
+	uv_write_t write;
 	int keep_alive;
 } http_response_t;
 
