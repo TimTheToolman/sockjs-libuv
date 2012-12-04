@@ -3,6 +3,8 @@
 #include "http.h"
 #include "memory.h"
 
+#define HEADER "%s: %s\r\n"
+
 // Request stuff
 void http_request_init(http_request_t* req)
 {
@@ -28,9 +30,32 @@ void http_response_init(http_response_t* resp)
 void http_response_free(http_response_t* resp)
 {
 	memory_release_buf(resp->headers);
-	memory_release_buf(resp->body)
+	memory_release_buf(resp->body);
 	memory_release_buf(resp->response[0]);
-	memory_release_buf(resp->response[1]);
+}
+
+void http_response_add_header(http_response_t* resp, const char* header, size_t length)
+{
+	int len = resp->headers.len;
+
+	if (len == 0)
+		len = 64;
+
+	size_t old_len = resp->headers_len;
+	size_t new_len = old_len + length + 1;
+
+	while (new_len > len)
+		len *= 2;
+
+	if (resp->headers.len != len) {
+		resp->headers = memory_realloc(resp->headers, len);
+	}
+
+	char* buf = (char*)resp->headers.base;
+	memcpy(buf + old_len, header, length);
+	buf[new_len] = '\0';
+
+	resp->headers_len = new_len - 1;
 }
 
 void http_response_set_error(http_response_t* resp, int status_code)

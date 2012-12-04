@@ -94,16 +94,19 @@ void client_free(client_t* client) {
 	if (client->parsing != NULL) {
 		http_request_free(client->parsing);
 		free(client->parsing);
+        client->parsing = NULL;
 	}
 
 	if (client->request != NULL) {
 		http_request_free(client->request);
 		free(client->request);
+        client->request = NULL;
 	}
 
 	if (client->response != NULL) {
 		http_response_free(client->response);
 		free(client->response);
+        client->response = NULL;
 	}
 
 	// Reset request queue
@@ -130,19 +133,20 @@ void client_close(client_t* client) {
 }
 
 void after_write(uv_write_t* req, int status) {
-	client_t* client = (client_t*)req->handle;
+	client_t* client = (client_t*)req->handle->data;
 	http_response_t* resp = (http_response_t*)req->data;
 
 	if (status != 0) {
 		ERROR(client->server->loop);
 		client_close(client);
-	}
-
+    } else
 	if (!resp->keep_alive)
 		client_close(client);
 
-	http_response_free(resp);
-	free(resp);
+    http_response_free(resp);
+    free(resp);
+    if (resp == client->response)
+        client->response = NULL;
 }
 
 // Network
@@ -154,14 +158,14 @@ void on_net_data(uv_stream_t* stream, ssize_t nread, uv_buf_t buf) {
 			ssize_t parsed = http_parser_execute(&client->parser, &client_parser, buf.base, nread);
 
 			if (parsed < nread) {
-				uv_close((uv_handle_t *)&client->stream, after_close);
+                client_close(client);
 			}
 		} else {
 			// Pass buffer to the sub protocol handler
 			client->handler(client, nread, buf);
 		}
 	} else {
-		uv_close((uv_handle_t *)&client->stream, after_close);
+        client_close(client);
 	}
 
 	memory_free(buf);
@@ -207,8 +211,8 @@ void client_send_response(client_t* client) {
 									status_string,
 									resp->headers.base);
 
-		resp->response[0] = memory_alloc(response_len);
-		snprintf(resp->response[0].base, response_len, HTTP_HEADER_TEMPLATE,
+		resp->response[0] = memory_alloc(response_len + 1);
+		snprintf(resp->response[0].base, response_len + 1, HTTP_HEADER_TEMPLATE,
 									resp->http_version_minor,
 									resp->status_code,
 									status_string,
@@ -219,8 +223,8 @@ void client_send_response(client_t* client) {
 									resp->status_code,
 									status_string);
 
-		resp->response[0] = memory_alloc(response_len);
-		snprintf(resp->response[0].base, response_len, HTTP_TEMPLATE,
+		resp->response[0] = memory_alloc(response_len + 1);
+		snprintf(resp->response[0].base, response_len + 1, HTTP_TEMPLATE,
 									resp->http_version_minor,
 									resp->status_code,
 									status_string);

@@ -22,6 +22,7 @@ typedef struct {
 	int http_version_minor;
 	// Output header blob
 	uv_buf_t headers;
+    int headers_len;
 	// Response body
 	uv_buf_t body;
 
@@ -37,6 +38,8 @@ void http_request_free(http_request_t* req);
 
 void http_response_init(http_response_t* resp);
 void http_response_free(http_response_t* resp);
+
+void http_response_add_header(http_response_t* resp, const char* header, size_t len);
 
 void http_response_set_error(http_response_t* resp, int status_code);
 
