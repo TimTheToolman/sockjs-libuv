@@ -1,6 +1,4 @@
-#include <string.h>
-#include <stdlib.h>
-#include "queue.h"
+#include "global.h"
 
 // TODO: Use more efficient memory layout
 // TODO: use ngx-queue.h?

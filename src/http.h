@@ -1,13 +1,11 @@
 #ifndef	HTTP_H_
 #define HTTP_H_
 
-#include <uv.h>
-
 // HTTP request
 typedef struct {
 	char* method;
 	char* url;
-	uv_buf_t body;
+	str_t body;
 
 	// Header data
 	int http_version_minor;
@@ -21,19 +19,16 @@ typedef struct {
 	// HTTP protocol version (1.x)
 	int http_version_minor;
 	// Output header blob
-    
-	// TODO: Use optimized data structure
-	uv_buf_t headers;
-    size_t headers_len;
-    
+	str_t headers;
+
     // TODO: Special bool type
     int headers_sent;
-    
-	// Response body
-	uv_buf_t body;
 
-	// libuv stuff
-	uv_buf_t hdr_buf;
+	// Response body
+	str_t body;
+
+	// Output headers and HTTP code
+	str_t response_buf;
 
 	uv_write_t hdr_write;
 	uv_write_t body_write;
@@ -48,7 +43,8 @@ void http_request_free(http_request_t* req);
 void http_response_init(http_response_t* resp);
 void http_response_free(http_response_t* resp);
 
-void http_response_add_header(http_response_t* resp, const char* header, size_t len);
+#define http_response_add_header(resp, header, len)	\
+	str_append(&resp->headers, header, len);
 
 void http_response_set_error(http_response_t* resp, int status_code);
 

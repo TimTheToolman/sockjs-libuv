@@ -1,5 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "global.h"
 #include "server.h"
 #include "client.h"

@@ -1,11 +1,7 @@
 #ifndef CLIENT_H_
 #define CLIENT_H_
 
-#include <uv.h>
-#include <http_parser.h>
 #include "server.h"
-#include "http.h"
-#include "queue.h"
 
 struct client_s;
 

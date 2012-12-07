@@ -1,13 +1,9 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
 #include "global.h"
 #include "client.h"
-#include "memory.h"
 #include "router.h"
 
-#define HTTP_HEADER_TEMPLATE "HTTP/1.%d %d %s\r\n%s\r\n"
-#define HTTP_TEMPLATE "HTTP/1.%d %d %s\r\n\r\n"
+#define HTTP_TEMPLATE "HTTP/1.%d %d %s\r\n"
+#define HTTP_TAIL "\r\n"
 
 // Request handling
 void handle_request(client_t* client) {
@@ -44,15 +40,7 @@ int on_body(http_parser* p, const char* data, size_t len) {
 
 	// TODO: Body length validation
 	http_request_t* request = client->parsing;
-
-	size_t old_len = request->body.len;
-	if (old_len > 0) {
-		request->body = memory_realloc(request->body, old_len + len);
-	} else {
-		request->body = memory_alloc(len);
-	}
-
-	memcpy(((char *)request->body.base + old_len), data, len);
+	str_append_len(&request->body, data, len);
 
 	return 0;
 }
@@ -161,7 +149,7 @@ void after_header_write(uv_write_t* req, int status) {
 		client_close(client);
 	}
 
-	memory_release_buf(resp->hdr_buf);
+	str_free(&resp->response_buf);
 }
 
 // Network
@@ -183,7 +171,7 @@ void on_net_data(uv_stream_t* stream, ssize_t nread, uv_buf_t buf) {
         client_close(client);
 	}
 
-	memory_free(buf);
+	memory_uv_free(buf);
 }
 
 // Client state
@@ -210,57 +198,30 @@ int client_init(server_t* server, client_t* client) {
 	}
 }
 
-uv_buf_t client_make_headers(client_t* client)
-{
-	http_response_t* resp = client->response;
-
-	// Generate HTTP response
-	const char* status_string = http_get_status_string(resp->status_code);
-
-	int len;
-	uv_buf_t response;
-
-	if (resp->headers.len > 0) {
-		len = snprintf(NULL, 0, HTTP_HEADER_TEMPLATE,
-									resp->http_version_minor,
-									resp->status_code,
-									status_string,
-									resp->headers.base);
-
-		response = memory_alloc(len + 1);
-		snprintf(response.base, len + 1, HTTP_HEADER_TEMPLATE,
-						resp->http_version_minor,
-						resp->status_code,
-						status_string,
-						resp->headers.base);
-	} else {
-		len = snprintf(NULL, 0, HTTP_TEMPLATE,
-									resp->http_version_minor,
-									resp->status_code,
-									status_string);
-
-		response = memory_alloc(len + 1);
-		snprintf(response.base, len + 1, HTTP_TEMPLATE,
-									resp->http_version_minor,
-									resp->status_code,
-									status_string);
-	}
-    
-    return response;
-}
-
 void client_send_headers(client_t* client)
 {
 	http_response_t* resp = client->response;
 
 	assert(!resp->headers_sent);
 
-	resp->hdr_buf = client_make_headers(client);
+	const char* status_string = http_get_status_string(resp->status_code);
+
+	// Generate HTTP response
+	str_t* buf = &resp->response_buf;
+	str_format(buf, HTTP_TEMPLATE,
+					resp->http_version_minor,
+					resp->status_code,
+					status_string);
+	str_reserve(buf, str_len(buf) + str_len(&resp->headers) + sizeof(HTTP_TAIL) - 1);
+	str_append_buf(buf, resp->headers.buf);
+	str_append_len(buf, HTTP_TAIL, sizeof(HTTP_TAIL) - 1);
+
+	// Send response
 	resp->hdr_write.data = resp;
 
 	uv_write(&resp->hdr_write,
 		(uv_stream_t*)&client->stream,
-		&resp->hdr_buf,
+		&resp->response_buf.buf,
 		1,
 		after_header_write);
 
@@ -270,17 +231,17 @@ void client_send_headers(client_t* client)
 void client_finish_response(client_t* client)
 {
 	http_response_t* resp = client->response;
-    
+
 	if (!resp->headers_sent)
 		client_send_headers(client);
 
 	// If necessary - send body
-	if (resp->body.len > 0) {
+	if (str_len(&resp->body) > 0) {
 		resp->body_write.data = resp;
 
 		uv_write(&resp->body_write,
 					(uv_stream_t*)&client->stream,
-					&resp->body,
+					&resp->body.buf,
 					1,
 					after_write);
 	}
