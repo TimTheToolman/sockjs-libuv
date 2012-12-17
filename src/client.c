@@ -108,6 +108,14 @@ void client_free(client_t* client) {
 	free(client);
 }
 
+void response_free(client_t* client, http_response_t* resp) {
+	http_response_free(resp);
+	free(resp);
+
+	if (resp == client->response)
+		client->response = NULL;
+}
+
 void after_close(uv_handle_t* handle) {
 	client_t* client = (client_t*)handle->data;
 
@@ -133,11 +141,7 @@ void after_write(uv_write_t* req, int status) {
 		client_close(client);
 	}
 
-    http_response_free(resp);
-    free(resp);
-
-    if (resp == client->response)
-        client->response = NULL;
+	response_free(client, resp);
 }
 
 void after_header_write(uv_write_t* req, int status) {
@@ -148,8 +152,13 @@ void after_header_write(uv_write_t* req, int status) {
 		ERROR(client->server->loop);
 		client_close(client);
 	}
-
 	str_free(&resp->response_buf);
+
+	// If there's no body to send, finalize request
+	if (str_len(&resp->body) == 0) {
+		if (!resp->keep_alive)
+			client_close(client);
+	}
 }
 
 // Network

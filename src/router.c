@@ -2,11 +2,22 @@
 #include "router.h"
 
 
-int check_path(const char* path, const char* needle, int len) {
-	return memcmp(path, needle, len);
+int partial_match(const char* path, const char* needle, size_t len) {
+	return memcmp(path, needle, len) == 0;
 }
 
-#define VERIFY_PATH(path, n)	check_path(path + 1, n, sizeof(n) - 1)
+int exact_match(const char* path, const char* needle, size_t len) {
+	if (memcmp(path, needle, len) == 0) {
+		char c = path[len];
+		if (c == '\0' || c == '?')
+			return TRUE;
+	}
+
+	return FALSE;
+}
+
+#define PARTIAL(path, n)	partial_match(path, n, sizeof(n) - 1)
+#define EXACT(path, n)	exact_path(path, n, sizeof(n) - 1)
 
 #define HEADER "Content-Type: text/html\r\n"
 
@@ -31,11 +42,10 @@ void route_request(client_t* client)
 	{
 		switch (*(c++)) {
 			case 'h':
-				if (VERIFY_PATH(c, "ello")) {
+				if (EXACT(c, "ello")) {
 					handle_hello(client);
 					return;
 				}
-
 				break;
 		}
 	}
