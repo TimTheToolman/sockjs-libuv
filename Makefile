@@ -1,8 +1,8 @@
-CSTDFLAG=-pedantic -Wall -Wno-unused-parameter
+CSTDFLAG= 
 CFLAGS += -g -Ivendor/libuv/include -Ivendor/http-parser
-LINKFLAGS=-lm -lpthread
+LINKFLAGS=-lm -lpthread -lrt
 
-OBJS=src/server.o src/client.o src/memory.o src/http.o src/queue.o src/router.o src/string.o
+OBJS=src/server.o src/client.o src/memory.o src/http.o src/queue.o src/router.o 
 INCLUDES=$(wildcard src/*.h)
 
 # Platform customizations

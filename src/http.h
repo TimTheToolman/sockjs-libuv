@@ -5,7 +5,6 @@
 typedef struct {
 	char* method;
 	char* url;
-	str_t body;
 
 	// Header data
 	int http_version_minor;
@@ -19,19 +18,15 @@ typedef struct {
 	// HTTP protocol version (1.x)
 	int http_version_minor;
 	// Output header blob
-	str_t headers;
+	
 
     // TODO: Special bool type
     int headers_sent;
 
 	// Response body
-	str_t body;
+
 
 	// Output headers and HTTP code
-	str_t response_buf;
-
-	uv_write_t hdr_write;
-	uv_write_t body_write;
 
 	int keep_alive;
 } http_response_t;

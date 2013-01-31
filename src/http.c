@@ -15,7 +15,7 @@ void http_request_free(http_request_t* req)
 		req->url = NULL;
 	}
 
-	str_free(&req->body);
+
 }
 
 // Response stuff
@@ -26,9 +26,7 @@ void http_response_init(http_response_t* resp)
 
 void http_response_free(http_response_t* resp)
 {
-	str_free(&resp->headers);
-	str_free(&resp->body);
-	str_free(&resp->response_buf);
+	
 }
 
 void http_response_set_error(http_response_t* resp, int status_code)

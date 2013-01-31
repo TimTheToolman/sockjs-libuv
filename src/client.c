@@ -38,10 +38,6 @@ int on_url(http_parser* p, const char* data, size_t len) {
 int on_body(http_parser* p, const char* data, size_t len) {
 	client_t* client = (client_t*)p->data;
 
-	// TODO: Body length validation
-	http_request_t* request = client->parsing;
-	str_append_len(&request->body, data, len);
-
 	return 0;
 }
 
@@ -152,13 +148,8 @@ void after_header_write(uv_write_t* req, int status) {
 		ERROR(client->server->loop);
 		client_close(client);
 	}
-	str_free(&resp->response_buf);
-
-	// If there's no body to send, finalize request
-	if (str_len(&resp->body) == 0) {
-		if (!resp->keep_alive)
-			client_close(client);
-	}
+	
+	
 }
 
 // Network
@@ -209,62 +200,11 @@ int client_init(server_t* server, client_t* client) {
 
 void client_send_headers(client_t* client)
 {
-	http_response_t* resp = client->response;
 
-	assert(!resp->headers_sent);
-
-	const char* status_string = http_get_status_string(resp->status_code);
-
-	// Generate HTTP response
-	str_t* buf = &resp->response_buf;
-	str_format(buf, HTTP_TEMPLATE,
-					resp->http_version_minor,
-					resp->status_code,
-					status_string);
-	str_reserve(buf, str_len(buf) + str_len(&resp->headers) + sizeof(HTTP_TAIL) - 1);
-	str_append_buf(buf, resp->headers.buf);
-	str_append_len(buf, HTTP_TAIL, sizeof(HTTP_TAIL) - 1);
-
-	// Send response
-	resp->hdr_write.data = resp;
-
-	uv_write(&resp->hdr_write,
-		(uv_stream_t*)&client->stream,
-		&resp->response_buf.buf,
-		1,
-		after_header_write);
-
-	resp->headers_sent = TRUE;
 }
 
 void client_finish_response(client_t* client)
 {
 	http_response_t* resp = client->response;
 
-	if (!resp->headers_sent)
-		client_send_headers(client);
-
-	// If necessary - send body
-	if (str_len(&resp->body) > 0) {
-		resp->body_write.data = resp;
-
-		uv_write(&resp->body_write,
-					(uv_stream_t*)&client->stream,
-					&resp->body.buf,
-					1,
-					after_write);
-	}
-
-	// Cleanup previous request
-	http_request_free(client->request);
-	free(client->request);
-	client->request = NULL;
-
-	// If there's request in queue, run it
-	if (resp->keep_alive) {
-		if (!queue_is_empty(&client->request_queue)) {
-			client->request = (http_request_t*)queue_pop(&client->request_queue);
-			handle_request(client);
-		}
-	}
 }

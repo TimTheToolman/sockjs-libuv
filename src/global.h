@@ -9,7 +9,6 @@
 #include <uv.h>
 #include <http_parser.h>
 
-#include "string.h"
 #include "queue.h"
 #include "memory.h"
 #include "http.h"
@@ -21,4 +20,6 @@
 
 #define CHECK(action, ret) if (action) { ERROR() return ret; }
 
+#define TRUE 1
+#define FALSE 0
 #endif
