@@ -1,11 +1,19 @@
 #ifndef	HTTP_H_
 #define HTTP_H_
 
+#include "nc_array.h"
+
+typedef struct{
+	char *field;
+	char *value;	
+}header;
+
 // HTTP request
 typedef struct {
 	char* method;
 	char* url;
-
+	
+	struct array* headers;
 	// Header data
 	int http_version_minor;
 	int keep_alive;
@@ -34,6 +42,9 @@ typedef struct {
 // API
 void http_request_init(http_request_t* req);
 void http_request_free(http_request_t* req);
+void http_request_insert_header_field(http_request_t* req, char* field);
+void http_request_insert_header_value(http_request_t* req, char* value);
+
 
 void http_response_init(http_response_t* resp);
 void http_response_free(http_response_t* resp);

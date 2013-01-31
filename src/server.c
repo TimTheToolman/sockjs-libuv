@@ -51,6 +51,6 @@ server_t* server_init(uv_loop_t* loop, const char* addr, int port) {
 int main(int argc, char** argv) {
 	uv_loop_t* loop = uv_default_loop();
 	server_init(loop, "0.0.0.0", 8002);
-	uv_run(loop);
+	uv_run(loop,UV_RUN_DEFAULT);
 	return 0;
 }

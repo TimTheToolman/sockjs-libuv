@@ -6,6 +6,9 @@
 void http_request_init(http_request_t* req)
 {
 	memset(req, 0, sizeof(http_request_t));
+
+	array_init(req->headers, 5, sizeof(header));
+
 }
 
 void http_request_free(http_request_t* req)
